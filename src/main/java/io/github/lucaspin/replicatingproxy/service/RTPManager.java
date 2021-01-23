@@ -1,7 +1,6 @@
 package io.github.lucaspin.replicatingproxy.service;
 
 import io.github.lucaspin.replicatingproxy.util.RTPPacketParser;
-import io.github.lucaspin.replicatingproxy.util.WavUtils;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.engineio.client.transports.WebSocket;
@@ -24,14 +23,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class RTPManager {
     private static final String WS_SERVER = "http://127.0.0.1:4010";
+    private static final int MAX_PACKETS_BEFORE_FLUSHING = 128;
 
-    private static final short MONO = 1;
-    private static final short STEREO = 2;
-    public static final int TEN_SECONDS = 10;
-    public static final short BITS_PER_SAMPLE = 16;
-    public static final int EIGHT_THOUSAND = 8000;
-    public static final int FORTY_FOUR_THOUSAND = 44100;
-    public static final int MAX_PACKETS_BEFORE_FLUSHING = 128;
+    /**
+     * This is a header for a pcm_s16le, 44100 Hz, 2 channels, 16 bits per sample media stream
+     */
+    private static final byte[] PCMU_WAV_HEADER = new byte[]{
+            82, 73, 70, 70, -60, -22, 26, 0,
+            87, 65, 86, 69, 102, 109, 116, 32,
+            16, 0, 0, 0, 1, 0, 2, 0,
+            68, -84, 0, 0, 16, -79, 2, 0,
+            4, 0, 16, 0, 100, 97, 116, 97,
+            -96, -22, 26, 0
+    };
 
     private final Map<Integer, SyncSourceStatus> syncSources = new HashMap<>();
     private final Clock clock = Clock.systemUTC();
@@ -67,8 +71,7 @@ public class RTPManager {
 
             socket.on(Socket.EVENT_CONNECT, args -> {
                 log.info("Connected to {}", WS_SERVER);
-                int numSamples = FORTY_FOUR_THOUSAND * TEN_SECONDS;
-                socket.send(WavUtils.buildHeader(STEREO, FORTY_FOUR_THOUSAND, BITS_PER_SAMPLE, numSamples));
+                socket.send(PCMU_WAV_HEADER);
             });
 
             socket.on(Socket.EVENT_CONNECT_ERROR, e -> log.error("Connection failed: {}", e));
