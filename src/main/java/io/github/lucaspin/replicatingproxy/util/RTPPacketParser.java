@@ -26,7 +26,7 @@ public class RTPPacketParser {
     @Getter
     @Builder
     @ToString
-    static public class RTPPacket {
+    static public class RTPPacket implements Comparable<RTPPacket> {
         private final int version;
         private final boolean padding;
         private final boolean extension;
@@ -37,5 +37,10 @@ public class RTPPacketParser {
         private final int timestamp;
         private final int synchronizationSourceId;
         private final byte[] payload;
+
+        @Override
+        public int compareTo(RTPPacket o) {
+            return Integer.compare(getSequenceNumber(), o.getSequenceNumber());
+        }
     }
 }
