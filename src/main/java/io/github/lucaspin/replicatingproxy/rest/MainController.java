@@ -1,6 +1,9 @@
 package io.github.lucaspin.replicatingproxy.rest;
 
 import io.github.lucaspin.replicatingproxy.service.CustomMessageHandler;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -10,10 +13,6 @@ import org.springframework.integration.dsl.context.IntegrationFlowContext;
 import org.springframework.integration.dsl.context.IntegrationFlowContext.IntegrationFlowRegistration;
 import org.springframework.integration.ip.udp.UnicastReceivingChannelAdapter;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.function.Consumer;
 
 @RestController
 public class MainController {
