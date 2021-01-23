@@ -12,15 +12,12 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import java.net.URISyntaxException;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -34,7 +31,7 @@ public class RTPManager {
     public static final short BITS_PER_SAMPLE = 16;
     public static final int EIGHT_THOUSAND = 8000;
     public static final int FORTY_FOUR_THOUSAND = 44100;
-    public static final Duration MAX_WAIT_BEFORE_FLUSH = Duration.ofSeconds(5);
+    public static final int MAX_PACKETS_BEFORE_FLUSHING = 128;
 
     private final Map<Integer, SyncSourceStatus> syncSources = new HashMap<>();
     private final Clock clock = Clock.systemUTC();
@@ -45,6 +42,9 @@ public class RTPManager {
             synchronized (syncSourceStatus.getLock()) {
                 syncSourceStatus.addPacket(packet);
                 syncSourceStatus.setLastPacketReceivedAt(clock.instant());
+                if (syncSourceStatus.getPackets().size() > MAX_PACKETS_BEFORE_FLUSHING) {
+                    syncSourceStatus.flush();
+                }
             }
         } else {
             ArrayList<RTPPacketParser.RTPPacket> packets = new ArrayList<>();
@@ -80,25 +80,6 @@ public class RTPManager {
         }
     }
 
-    @Scheduled(fixedRateString = "PT5S")
-    public void flushPackets() {
-        syncSources.forEach((syncSourceId, status) -> {
-            if (status.getPackets().isEmpty()) {
-                log.info("No packets to send for {}", syncSourceId);
-            } else {
-                synchronized (status.getLock()) {
-                    Instant flushAt = status.getLastPacketReceivedAt().plus(MAX_WAIT_BEFORE_FLUSH);
-                    if (clock.instant().isAfter(flushAt)) {
-                        log.info("Last packet received was at {} - flushing", status.getLastPacketReceivedAt());
-                        status.flush();
-                    } else {
-                        log.info("Last packet received was at {} - waiting", status.getLastPacketReceivedAt());
-                    }
-                }
-            }
-        });
-    }
-
     @Getter
     @Setter
     @Builder
@@ -115,6 +96,7 @@ public class RTPManager {
         }
 
         public void flush() {
+            log.info("Flushing packets for {}", syncSourceId);
             synchronized (lock) {
                 packets = packets.stream().sorted().collect(Collectors.toList());
                 packets.forEach(packet -> webSocket.send(packet.getPayload()));

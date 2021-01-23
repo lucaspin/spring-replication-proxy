@@ -84,13 +84,6 @@ public class MainController {
         portsInUse.put(port, register);
     }
 
-    private Consumer<Integer> streamFinished() {
-        return port -> {
-            LOG.info("Removing registration for {}", port);
-            stopInboundAdapter(portsInUse.get(port), port);
-        };
-    }
-
     static class AllocateResponse {
         public Integer port;
 
