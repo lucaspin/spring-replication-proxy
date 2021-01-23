@@ -2,8 +2,8 @@ package io.github.lucaspin.replicatingproxy.rest;
 
 import io.github.lucaspin.replicatingproxy.service.CustomMessageHandler;
 import io.github.lucaspin.replicatingproxy.service.RTPManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.StandardIntegrationFlow;
@@ -11,14 +11,10 @@ import org.springframework.integration.dsl.context.IntegrationFlowContext;
 import org.springframework.integration.dsl.context.IntegrationFlowContext.IntegrationFlowRegistration;
 import org.springframework.integration.ip.udp.UnicastReceivingChannelAdapter;
 import org.springframework.web.bind.annotation.*;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.util.function.Consumer;
 
+@Slf4j
 @RestController
 public class MainController {
-
-    private static final Logger LOG = LoggerFactory.getLogger(MainController.class);
 
     private final IntegrationFlowContext flowContext;
     private final RTPManager rtpManager;
@@ -59,7 +55,7 @@ public class MainController {
 
     @DeleteMapping("/ports/{port}")
     public ResponseEntity<Void> allocatePortForReplication(@PathVariable("port") Integer port) {
-        LOG.info("Deleting port {}", port);
+        log.info("Deleting port {}", port);
         IntegrationFlowRegistration registration = portsInUse.get(port);
         if (registration == null) {
             return ResponseEntity.notFound().build();
