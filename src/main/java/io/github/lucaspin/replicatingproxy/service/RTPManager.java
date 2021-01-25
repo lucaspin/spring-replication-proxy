@@ -10,8 +10,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import java.net.URISyntaxException;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +24,7 @@ public class RTPManager {
     private static final int MAX_PACKETS_BEFORE_FLUSHING = 128;
 
     /**
-     * This is a header for a pcm_s16le, 44100 Hz, 2 channels, 16 bits per sample media stream
+     * This is a header for a 10s, pcm_s16le, 44100 Hz, 2 channels, 16 bits per sample media stream
      */
     private static final byte[] PCMU_WAV_HEADER = new byte[]{
             82, 73, 70, 70, -60, -22, 26, 0,
@@ -38,26 +36,21 @@ public class RTPManager {
     };
 
     private final Map<Integer, SyncSourceStatus> syncSources = new HashMap<>();
-    private final Clock clock = Clock.systemUTC();
 
     public synchronized void onPacketReceived(RTPPacketParser.RTPPacket packet) {
         if (syncSources.containsKey(packet.getSynchronizationSourceId())) {
             SyncSourceStatus syncSourceStatus = syncSources.get(packet.getSynchronizationSourceId());
             synchronized (syncSourceStatus.getLock()) {
                 syncSourceStatus.addPacket(packet);
-                syncSourceStatus.setLastPacketReceivedAt(clock.instant());
                 if (syncSourceStatus.getPackets().size() > MAX_PACKETS_BEFORE_FLUSHING) {
                     syncSourceStatus.flush();
                 }
             }
         } else {
-            ArrayList<RTPPacketParser.RTPPacket> packets = new ArrayList<>();
-            packets.add(packet);
             syncSources.put(packet.getSynchronizationSourceId(), SyncSourceStatus.builder()
                     .syncSourceId(packet.getSynchronizationSourceId())
-                    .packets(packets)
+                    .packets(new ArrayList<>(List.of(packet)))
                     .webSocket(initializeSocket())
-                    .lastPacketReceivedAt(clock.instant())
                     .lock(new Object())
                     .build());
         }
@@ -91,7 +84,6 @@ public class RTPManager {
         private int syncSourceId;
         private List<RTPPacketParser.RTPPacket> packets;
         private Socket webSocket;
-        private Instant lastPacketReceivedAt;
         private final Object lock;
 
         public void addPacket(RTPPacketParser.RTPPacket packet) {
@@ -100,11 +92,9 @@ public class RTPManager {
 
         public void flush() {
             log.info("Flushing packets for {}", syncSourceId);
-            synchronized (lock) {
-                packets = packets.stream().sorted().collect(Collectors.toList());
-                packets.forEach(packet -> webSocket.send(packet.getPayload()));
-                packets = new ArrayList<>();
-            }
+            packets = packets.stream().sorted().collect(Collectors.toList());
+            packets.forEach(packet -> webSocket.send(packet.getPayload()));
+            packets = new ArrayList<>();
         }
     }
 }

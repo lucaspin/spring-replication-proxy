@@ -10,7 +10,7 @@ import static io.github.lucaspin.replicatingproxy.util.RTPPacketParser.parsePack
 
 @Slf4j
 @RequiredArgsConstructor
-public class CustomMessageHandler extends AbstractMessageHandler {
+public class RTPMessageHandler extends AbstractMessageHandler {
 
     private final RTPManager rtpManager;
 

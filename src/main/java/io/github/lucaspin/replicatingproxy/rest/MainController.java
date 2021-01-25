@@ -1,6 +1,6 @@
 package io.github.lucaspin.replicatingproxy.rest;
 
-import io.github.lucaspin.replicatingproxy.service.CustomMessageHandler;
+import io.github.lucaspin.replicatingproxy.service.RTPMessageHandler;
 import io.github.lucaspin.replicatingproxy.service.RTPManager;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +74,7 @@ public class MainController {
 
     private void registerNewInboundAdapter(Integer port) {
         StandardIntegrationFlow flow = IntegrationFlows.from(new UnicastReceivingChannelAdapter(port))
-                .handle(new CustomMessageHandler(rtpManager))
+                .handle(new RTPMessageHandler(rtpManager))
                 .get();
         IntegrationFlowRegistration register = flowContext.registration(flow).register();
         portsInUse.put(port, register);
